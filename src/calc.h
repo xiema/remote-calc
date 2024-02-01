@@ -28,6 +28,17 @@ typedef struct parse_state {
     int maxlength;
 } parse_state;
 
+typedef enum {
+    TOK_NUMBER,
+    TOK_OP,
+    TOK_PAREN
+} TOK_TYPE;
+
+typedef struct token {
+    TOK_TYPE type;
+    int val;
+} token;
+
 expression* create_number(int value);
 
 expression* create_tree(char op, expression* left, expression* right);
@@ -41,3 +52,5 @@ int debug_expression(expression* expr, char* out, int curpos, int maxlength);
 int calc_run();
 
 extern int ALLOCATED;
+
+int tokenize(char* str, token* out, int maxlength);

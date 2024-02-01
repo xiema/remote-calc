@@ -1,6 +1,8 @@
 #include "calc.h"
 #include "socket.h"
 
+#include "sc_queue.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +36,7 @@ int calc_run() {
 }
 
 int parse_expression(parse_state ps, expression* out) {
+    struct sc_queue_char stack;
     return 0;
 }
 
@@ -58,7 +61,9 @@ expression* create_tree(char op, expression* left, expression* right) {
 int free_expression(expression* expr) {
     if (expr->type == EXPR_TREE) {
         free_expression((expr->data).tree.left);
+        (expr->data).tree.left = NULL;
         free_expression((expr->data).tree.right);
+        (expr->data).tree.right = NULL;
     }
     // free(expr);
     customFree(expr);
@@ -107,4 +112,69 @@ int debug_expression(expression* expr, char* out, int curpos, int maxlength) {
     else {
         return -1;
     }
+}
+
+static int is_digit(char c) {
+    char* DIGITS = "0123456789";
+    for (int i = 0; i < 10; i++) {
+        if (c == DIGITS[i]) return i;
+    }
+    return -1;
+}
+
+int tokenize(char* str, token* out, int maxlength) {
+    int state = 0; //0 - symbol; 1 - number
+    int len = 0;
+    int d;
+    for (int curpos = 0; curpos < maxlength; curpos++) {
+        // FINISH
+        if (str[curpos] == '\0') {
+            if (state == 1) {
+                len++;
+                state = 0;
+            }
+            break;
+        }
+        // DIGIT
+        else if ((d = is_digit(str[curpos])) >= 0) {
+            if (state == 0) {
+                out[len].type = TOK_NUMBER;
+                out[len].val = 0;
+            }
+            out[len].val = out[len].val * 10 + d;
+            state = 1;
+        }
+        // PAREN
+        else if (str[curpos] == '(' || str[curpos] == ')') {
+            if (state == 1) {
+                len++;
+                state = 0;
+            }
+            out[len].type = TOK_PAREN;
+            out[len].val = (int)(str[curpos]);
+            len++;
+        }
+        // OP
+        else if (str[curpos] == '+' || str[curpos] == '-' || str[curpos] == '*' || str[curpos] == '/') {
+            if (state == 1) {
+                len++;
+                state = 0;
+            }
+            out[len].type = TOK_OP;
+            out[len].val = (int)(str[curpos]);
+            len++;
+        }
+        // WHITESPACE
+        else if (str[curpos] == ' ') {
+            if (state == 1) {
+                len++;
+                state = 0;
+            }
+            continue;
+        }
+
+        if (len >= APP_MAXTOKENLENGTH) return -1;
+    }
+
+    return len;
 }

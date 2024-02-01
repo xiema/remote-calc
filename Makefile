@@ -16,6 +16,7 @@ endif
 # PATHS
 
 UNITY_DIR = vendor/unity/src/
+SC_DIR = vendor/sc/src/
 SRC_DIR = src/
 TEST_DIR = test/
 BUILD_DIR = build/
@@ -33,9 +34,11 @@ TEST_FILES = $(wildcard $(TEST_DIR)*.c)
 COMPILE=gcc -c
 LINK=gcc
 DEPEND=gcc -MM -MG -MF
-CFLAGS=-I. -I$(UNITY_DIR) -I$(SRC_DIR)
+CFLAGS=-I. -I$(UNITY_DIR) -I$(SRC_DIR) -I$(SC_DIR)
 
 RESULTS = $(patsubst $(TEST_DIR)$(TEST_PREFIX)%.c,$(RESULTS_DIR)$(TEST_PREFIX)%.txt,$(TEST_FILES))
+
+OBJS_STATIC_LIBS = $(OBJS_DIR)unity.o
 
 # SETUP DIRS
 
@@ -87,7 +90,7 @@ test: $(BUILD_DIRS) $(RESULTS)
 $(RESULTS_DIR)%.txt: $(BUILD_DIR)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
-$(BUILD_DIR)$(TEST_PREFIX)%.$(TARGET_EXTENSION): $(OBJS_DIR)$(TEST_PREFIX)%.o $(OBJS_DIR)%.o $(OBJS_DIR)unity.o #$(DEPENDS_DIR)Test%.d
+$(BUILD_DIR)$(TEST_PREFIX)%.$(TARGET_EXTENSION): $(OBJS_DIR)$(TEST_PREFIX)%.o $(OBJS_DIR)%.o $(OBJS_STATIC_LIBS) #$(DEPENDS_DIR)Test%.d
 	$(LINK) -o $@ $^
 
 SRC_OBJS_FILES = $(patsubst $(SRC_DIR)%.c,$(OBJS_DIR)%.o,$(SRC_FILES))
@@ -98,6 +101,8 @@ app: $(SRC_OBJS_FILES)
 .PHONY: clean
 .PHONY: test
 .PHONY: default
+
+# -include $(DEPENDS_DIR)*.d
 
 # TARGET = network_test
 # TEST_TARGET = test_network_test

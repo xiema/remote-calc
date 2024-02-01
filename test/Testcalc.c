@@ -1,6 +1,7 @@
 #include "unity.h"
 
 #include "calc.h"
+#include "socket.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -52,6 +53,20 @@ void test_debug_expression() {
     TEST_ASSERT_EQUAL(0, ALLOCATED);
 }
 
+void test_tokenization() {
+    token* tokens = malloc(sizeof(token) * APP_MAXTOKENLENGTH);
+    int length;
+    
+    int vals[] = { 1, (int)'+', 2, (int)'-', (int)'(', 3, (int)'*', 44, (int)')', (int)'/', 1234567890 };
+    int types[] = { TOK_NUMBER, TOK_OP, TOK_NUMBER, TOK_OP, TOK_PAREN, TOK_NUMBER, TOK_OP, TOK_NUMBER, TOK_PAREN, TOK_OP, TOK_NUMBER };
+    length = tokenize("  1 + 2 - ( 3 * 44  ) / 1234567890", tokens, 50);
+    TEST_ASSERT_EQUAL(11, length);
+    for (int i = 0; i < 11; i++) {
+        TEST_ASSERT_EQUAL(vals[i], tokens[i].val);
+        TEST_ASSERT_EQUAL(types[i], tokens[i].type);
+    }
+}
+
 void test_parsing() {
     expression* expr;
     char str[TEST_MAXDEBUGSTRLENGTH+1];
@@ -72,7 +87,7 @@ int main(void) {
     UNITY_BEGIN();
 
     RUN_TEST(test_debug_expression);
-    // RUN_TEST(test_parsing);
+    RUN_TEST(test_tokenization);
 
     UNITY_END();
 
