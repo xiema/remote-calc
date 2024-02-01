@@ -33,7 +33,7 @@ TEST_FILES = $(wildcard $(TEST_DIR)*.c)
 COMPILE=gcc -c
 LINK=gcc
 DEPEND=gcc -MM -MG -MF
-CFLAGS=-I. -I$(UNITY_DIR) -I$(SRC_DIR) -DTEST
+CFLAGS=-I. -I$(UNITY_DIR) -I$(SRC_DIR)
 
 RESULTS = $(patsubst $(TEST_DIR)$(TEST_PREFIX)%.c,$(RESULTS_DIR)$(TEST_PREFIX)%.txt,$(TEST_FILES))
 
@@ -76,6 +76,7 @@ $(DEPENDS_DIR)%.d:: $(TEST_DIR)%.c
 .PRECIOUS: $(OBJS_DIR)%.o
 .PRECIOUS: $(RESULTS_DIR)%.txt
 
+test: CFLAGS += -DTEST
 test: $(BUILD_DIRS) $(RESULTS)
 	@echo "--------------------\nIGNORES:\n--------------------"
 	@echo `grep -s IGNORE $(RESULTS_DIR)*.txt`
@@ -86,7 +87,7 @@ test: $(BUILD_DIRS) $(RESULTS)
 $(RESULTS_DIR)%.txt: $(BUILD_DIR)%.$(TARGET_EXTENSION)
 	-./$< > $@ 2>&1
 
-$(BUILD_DIR)$(TEST_PREFIX)%.$(TARGET_EXTENSION): $(OBJS_DIR)$(TEST_PREFIX)%.o $(OBJS_DIR)%.o $(OBJS_DIR)unity.o# $(DEPENDS_DIR)Test%.d
+$(BUILD_DIR)$(TEST_PREFIX)%.$(TARGET_EXTENSION): $(OBJS_DIR)$(TEST_PREFIX)%.o $(OBJS_DIR)%.o $(OBJS_DIR)unity.o #$(DEPENDS_DIR)Test%.d
 	$(LINK) -o $@ $^
 
 SRC_OBJS_FILES = $(patsubst $(SRC_DIR)%.c,$(OBJS_DIR)%.o,$(SRC_FILES))
