@@ -32,6 +32,8 @@ int client_run(char* ip_addr) {
         return 1;
     }
 
+    printf("Connected to server %s\n", ip_addr);
+
     char cmd[APP_MAXCMDLENGTH+1];
     char recv_msg[APP_MAXCMDLENGTH+1];
     int err, recv_size;
