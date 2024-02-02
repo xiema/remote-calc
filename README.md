@@ -36,6 +36,5 @@ Can handle addition, subtraction, multiplication and division of positive intege
 WinSock: [Tutorial](https://www.binarytides.com/winsock-socket-programming-tutorial/)
 
 # To do:
-> Handle multiple clients
-> Make Linux-compatible
-
+* Handle multiple clients
+* Make Linux-compatible
