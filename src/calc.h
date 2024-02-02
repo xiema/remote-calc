@@ -1,5 +1,7 @@
 #include <stddef.h>
 
+extern int ALLOCATED;
+
 typedef enum {
     EXPR_NUMBER,
     EXPR_TREE
@@ -45,26 +47,24 @@ expression* create_tree(char op, expression* left, expression* right);
 
 int free_expression(expression* expr);
 
+/* Main parse function.
+   Guarantees proper freeing of allocated memory upon failure.
+*/
 expression* parse_cmd(char* str, int* err_out);
-
-expression* parse_expression(parse_state* ps, int* err_out);
-
-expression* parse_term(parse_state* ps, int* err_out);
-
-expression* parse_number(parse_state* ps, int* err_out);
-
-expression* parse_group(parse_state* ps, int* err_out);
-
-expression* parse_group_or_number(parse_state* ps, int* err_out);
 
 int calculate_value(expression* expr, int* err_out);
 
 int calculate_value_str(char* str, int* err_out);
 
+/* Convert an expression into a human-readable string. Returns the length of the 
+   resulting string on success. Returns a negative number upon error.
+*/
 int debug_expression(expression* expr, char* out, int curpos, int maxlength);
 
+// Main function when running in 'calc' mode
 int calc_run();
 
-extern int ALLOCATED;
-
+/* "Tokenize" a string into multi-digit numbers or single symbols.
+   Returns the number of tokens on success, or a negative number on error.
+*/
 int tokenize(char* str, token* out, int maxlength);

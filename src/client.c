@@ -16,7 +16,6 @@ int client_run(char* ip_addr) {
     }
     
     // Set connection details
-    // TODO: Allow other address/port
     server.sin_addr.s_addr = inet_addr(ip_addr);
     server.sin_family = AF_INET;
     server.sin_port = htons(APP_DEFAULTPORT);

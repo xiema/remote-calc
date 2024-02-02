@@ -44,6 +44,17 @@ int calc_run() {
     return 0;
 }
 
+// Parse an addition/subtraction expression
+expression* parse_expression(parse_state* ps, int* err_out);
+// Parse a multiplication/division term
+expression* parse_term(parse_state* ps, int* err_out);
+// Parse a single number
+expression* parse_number(parse_state* ps, int* err_out);
+// Parse a parenthesized expression
+expression* parse_group(parse_state* ps, int* err_out);
+// Parse either a parenthesized expression or a single number
+expression* parse_group_or_number(parse_state* ps, int* err_out);
+
 expression* parse_cmd(char* str, int* err_out) {
     token* tokens = customMalloc(sizeof(token) * APP_MAXTOKENLENGTH);
     int token_len;
@@ -66,14 +77,19 @@ expression* parse_cmd(char* str, int* err_out) {
 }
 
 expression* parse_group(parse_state* ps, int* err_out) {
+    // Should always start with an opening paren
     if ((ps->tokens[ps->curpos]).type == TOK_PAREN && ps->tokens[ps->curpos].val == (int)'(') {
         ps->curpos++;
         int err = 0;
+
+        // Try parsing an expression inside the parens
         expression* expr = parse_expression(ps, &err);
         if (err != 0) {
             *err_out = err;
             return NULL;
         }
+
+        // Should always end with a closing paren
         if (ps->tokens[ps->curpos].type == TOK_PAREN && ps->tokens[ps->curpos].val == (int)')') {
             ps->curpos++;
             return expr;
@@ -93,11 +109,15 @@ expression* parse_expression(parse_state* ps, int* err_out) {
     expression* term;
     int err = 0;
 
+    // Always start with a term
     term = parse_term(ps, &err);
     if (err != 0) {
         *err_out = err;
         return NULL;
     }
+
+    // Try parsing additional terms, separated by a + or - operator
+    // Always left-associative
     while (ps->curpos < ps->maxlength) {
         if (ps->tokens[ps->curpos].type == TOK_OP && (ps->tokens[ps->curpos].val == (int)'+' || ps->tokens[ps->curpos].val == (int)'-')) {
             char op = (char) ps->tokens[ps->curpos].val;
@@ -128,13 +148,15 @@ expression* parse_term(parse_state* ps, int* err_out) {
     expression* expr2;
     int err = 0;
 
+    // Always parse a group or number first
     expr = parse_group_or_number(ps, &err);
     if (err != 0) {
         *err_out = err;
         return NULL;
     }
     
-
+    // Try parsing additional groups or numbers, separated by * or / operator
+    // Always left-associative
     while (ps->curpos < ps->maxlength) {
         if (ps->tokens[ps->curpos].type == TOK_OP && (ps->tokens[ps->curpos].val == (int)'*' || ps->tokens[ps->curpos].val == (int)'/')) {
             char op = (char) ps->tokens[ps->curpos].val;
@@ -222,14 +244,11 @@ int free_expression(expression* expr) {
     return 0;
 }
 
-/* Convert an expression into a human-readable string. Returns the length of the 
-   resulting string on success. Returns a negative number upon error.
-*/
 int debug_expression(expression* expr, char* out, int curpos, int maxlength) {
     if (expr->type == EXPR_NUMBER) {
         char numstr[APP_MAXNUMLENGTH];
         int len;
-        sprintf(numstr, "%d", (expr->data).value);
+        sprintf(numstr, "%d", expr->data.value);
         len = strlen(numstr);
         if (len < maxlength - curpos) {
             strcpy(out+curpos, numstr);
@@ -246,14 +265,14 @@ int debug_expression(expression* expr, char* out, int curpos, int maxlength) {
         out[curpos+(len++)] = '(';
 
         int adv;
-        adv = debug_expression((expr->data).tree.left, out, curpos+len, maxlength);
+        adv = debug_expression(expr->data.tree.left, out, curpos+len, maxlength);
         if (adv < 0) return -1;
         len += adv;
 
         if (curpos+len == maxlength) return -1;
         out[curpos+(len++)] = (expr->data).tree.op;
 
-        adv = debug_expression((expr->data).tree.right, out, curpos+len, maxlength);
+        adv = debug_expression(expr->data.tree.right, out, curpos+len, maxlength);
         if (adv < 0) return -1;
         len += adv;
 
@@ -267,18 +286,9 @@ int debug_expression(expression* expr, char* out, int curpos, int maxlength) {
     }
 }
 
-static int is_digit(char c) {
-    char* DIGITS = "0123456789";
-    for (int i = 0; i < 10; i++) {
-        if (c == DIGITS[i]) return i;
-    }
-    return -1;
-}
-
 int tokenize(char* str, token* out, int maxlength) {
     int state = 0; //0 - single-char symbol; 1 - multi-char number
     int len = 0;
-    int d;
     for (int curpos = 0; curpos < maxlength; curpos++) {
         // FINISH
         if (str[curpos] == '\0') {
@@ -289,12 +299,12 @@ int tokenize(char* str, token* out, int maxlength) {
             break;
         }
         // DIGIT
-        else if ((d = is_digit(str[curpos])) >= 0) {
+        else if (str[curpos] >= '0' && str[curpos] <= '9') {
             if (state == 0) {
                 out[len].type = TOK_NUMBER;
                 out[len].val = 0;
             }
-            out[len].val = out[len].val * 10 + d;
+            out[len].val = out[len].val * 10 + (str[curpos] - '0');
             state = 1;
         }
         // PAREN
