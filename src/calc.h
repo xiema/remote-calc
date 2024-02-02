@@ -22,12 +22,6 @@ struct expression {
     } data;
 };
 
-typedef struct parse_state {
-    char* str;
-    int curpos;
-    int maxlength;
-} parse_state;
-
 typedef enum {
     TOK_NUMBER,
     TOK_OP,
@@ -39,13 +33,29 @@ typedef struct token {
     int val;
 } token;
 
+typedef struct parse_state {
+    token* tokens;
+    int curpos;
+    int maxlength;
+} parse_state;
+
 expression* create_number(int value);
 
 expression* create_tree(char op, expression* left, expression* right);
 
 int free_expression(expression* expr);
 
-int parse_expression(parse_state ps, expression* out);
+expression* parse_cmd(char* str, int* err_out);
+
+expression* parse_expression(parse_state* ps, int* err_out);
+
+expression* parse_term(parse_state* ps, int* err_out);
+
+expression* parse_number(parse_state* ps, int* err_out);
+
+expression* parse_group(parse_state* ps, int* err_out);
+
+expression* parse_group_or_number(parse_state* ps, int* err_out);
 
 int debug_expression(expression* expr, char* out, int curpos, int maxlength);
 

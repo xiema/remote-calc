@@ -65,21 +65,132 @@ void test_tokenization() {
         TEST_ASSERT_EQUAL(vals[i], tokens[i].val);
         TEST_ASSERT_EQUAL(types[i], tokens[i].type);
     }
+
+    free(tokens);
+}
+
+void debug_expression_with_null(expression* expr, char* str) {
+    int len = debug_expression(expr, str, 0, TEST_MAXDEBUGSTRLENGTH);
+    str[len] = '\0';
 }
 
 void test_parsing() {
     expression* expr;
-    char str[TEST_MAXDEBUGSTRLENGTH+1];
+    int err = 0;
     char debugstr[TEST_MAXDEBUGSTRLENGTH+1];
 
-    strcpy(str, "23 + 24");
-    parse_state ps = { .str = str, .curpos = 0, .maxlength = 50 };
-    TEST_ASSERT_EQUAL(0, parse_expression(ps, expr));
-    debug_expression(expr, debugstr, 0, TEST_MAXDEBUGSTRLENGTH);
-    TEST_ASSERT_EQUAL_STRING("(23+24)", debugstr);
+    // add/sub only
+    expr = parse_cmd("23 + 24 - 1 + 321", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("(((23+24)-1)+321)", debugstr);
+    TEST_ASSERT_EQUAL(7, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
 
+    // all ops 1
+    expr = parse_cmd("23 * 4 + 2 * 3", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("((23*4)+(2*3))", debugstr);
+    TEST_ASSERT_EQUAL(7, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    // all ops 2
+    expr = parse_cmd("23 + 4 * 2 + 3", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("((23+(4*2))+3)", debugstr);
+    TEST_ASSERT_EQUAL(7, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    expr = parse_cmd("(23 + 4)", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("(23+4)", debugstr);
     TEST_ASSERT_EQUAL(3, ALLOCATED);
     free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    // add/sub only with parens
+    expr = parse_cmd("(23 + 4) - (2 + 3)", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("((23+4)-(2+3))", debugstr);
+    TEST_ASSERT_EQUAL(7, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    // parens
+    expr = parse_cmd("(23 + 4) * (2 + 3)", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("((23+4)*(2+3))", debugstr);
+    TEST_ASSERT_EQUAL(7, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    // nested parens 1
+    expr = parse_cmd("(1 + (2 - 3 * (5 / 2)))", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("(1+(2-(3*(5/2))))", debugstr);
+    TEST_ASSERT_EQUAL(9, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    // nested parens 2
+    expr = parse_cmd("(2 + 4) * (99 - 2) / (3 - 1) + 24", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("((((2+4)*(99-2))/(3-1))+24)", debugstr);
+    TEST_ASSERT_EQUAL(13, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    // single values in parens
+    expr = parse_cmd("(23) * (24)", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    debug_expression_with_null(expr, debugstr);
+    TEST_ASSERT_EQUAL_STRING("(23*24)", debugstr);
+    TEST_ASSERT_EQUAL(3, ALLOCATED);
+    free_expression(expr);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+}
+
+void test_parsing_error() {
+    expression* expr;
+    int err = 0;
+    char debugstr[TEST_MAXDEBUGSTRLENGTH+1];
+
+    expr = parse_cmd("- 24", &err);
+    TEST_ASSERT_NOT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    expr = parse_cmd("23 + - 24", &err);
+    TEST_ASSERT_NOT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    expr = parse_cmd("23 + 24 1", &err);
+    TEST_ASSERT_NOT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    expr = parse_cmd("23 1 + 24", &err);
+    TEST_ASSERT_NOT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    expr = parse_cmd("(23 + 1))", &err);
+    TEST_ASSERT_NOT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    expr = parse_cmd(")23 + 1", &err);
+    TEST_ASSERT_NOT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    expr = parse_cmd("()23 * 2", &err);
+    TEST_ASSERT_NOT_EQUAL(0, err);
     TEST_ASSERT_EQUAL(0, ALLOCATED);
 }
 
@@ -88,6 +199,8 @@ int main(void) {
 
     RUN_TEST(test_debug_expression);
     RUN_TEST(test_tokenization);
+    RUN_TEST(test_parsing);
+    RUN_TEST(test_parsing_error);
 
     UNITY_END();
 

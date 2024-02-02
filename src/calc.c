@@ -28,16 +28,156 @@ int calc_run() {
     // TODO: check behavior for multiple lines
     fgets(cmd, APP_MAXCMDLENGTH, stdin);
 
-    parse_state ps = { .str = cmd, .curpos = 0, .maxlength = APP_MAXCMDLENGTH };
-
     printf(cmd);
 
     return 0;
 }
 
-int parse_expression(parse_state ps, expression* out) {
-    struct sc_queue_char stack;
-    return 0;
+expression* parse_cmd(char* str, int* err_out) {
+    token* tokens = customMalloc(sizeof(token) * APP_MAXTOKENLENGTH);
+    int token_len;
+    if ((token_len = tokenize(str, tokens, APP_MAXCMDLENGTH)) < 0) {
+        *err_out = -1;
+        customFree(tokens);
+        return NULL;
+    }
+
+    parse_state ps = { .tokens = tokens, .curpos = 0, .maxlength = token_len };
+    expression* expr = parse_expression(&ps, err_out);
+    // Error on extra tokens
+    if (ps.curpos != ps.maxlength) {
+        *err_out = -2;
+        free_expression(expr);
+    }
+
+    customFree(tokens);
+    return expr;
+}
+
+expression* parse_group(parse_state* ps, int* err_out) {
+    if ((ps->tokens[ps->curpos]).type == TOK_PAREN && ps->tokens[ps->curpos].val == (int)'(') {
+        ps->curpos++;
+        int err = 0;
+        expression* expr = parse_expression(ps, &err);
+        if (err != 0) {
+            *err_out = err;
+            return NULL;
+        }
+        if (ps->tokens[ps->curpos].type == TOK_PAREN && ps->tokens[ps->curpos].val == (int)')') {
+            ps->curpos++;
+            return expr;
+        }
+        else {
+            *err_out = -4;
+            return NULL;
+        }
+    }
+    else {
+        *err_out = -3;
+        return NULL;
+    }
+}
+
+expression* parse_expression(parse_state* ps, int* err_out) {
+    expression* term;
+    int err = 0;
+
+    term = parse_term(ps, &err);
+    if (err != 0) {
+        *err_out = err;
+        return NULL;
+    }
+    while (ps->curpos < ps->maxlength) {
+        if (ps->tokens[ps->curpos].type == TOK_OP && (ps->tokens[ps->curpos].val == (int)'+' || ps->tokens[ps->curpos].val == (int)'-')) {
+            char op = (char) ps->tokens[ps->curpos].val;
+            ps->curpos++;
+            expression* term2 = parse_term(ps, &err);
+            if (err != 0) {
+                free_expression(term);
+                *err_out = err;
+                return NULL;
+            }
+            
+            term = create_tree(op, term, term2);
+        }
+        else if (ps->tokens[ps->curpos].type == TOK_PAREN && ps->tokens[ps->curpos].val == (int)')') {
+            return term;
+        }
+        else {
+            *err_out = -1;
+            free_expression(term);
+            return NULL;
+        }
+    }
+    return term;
+}
+
+expression* parse_term(parse_state* ps, int* err_out) {
+    expression* expr;
+    expression* expr2;
+    int err = 0;
+
+    expr = parse_group_or_number(ps, &err);
+    if (err != 0) {
+        *err_out = err;
+        return NULL;
+    }
+    
+
+    while (ps->curpos < ps->maxlength) {
+        if (ps->tokens[ps->curpos].type == TOK_OP && (ps->tokens[ps->curpos].val == (int)'*' || ps->tokens[ps->curpos].val == (int)'/')) {
+            char op = (char) ps->tokens[ps->curpos].val;
+            ps->curpos++;
+            expr2 = parse_group_or_number(ps, &err);
+            if (err != 0) {
+                free_expression(expr);
+                *err_out = err;
+                return NULL;
+            }
+            expr = create_tree(op, expr, expr2);
+            expr2 = NULL;
+        }
+        else {
+            break;
+        }
+    }
+
+    return expr;
+}
+
+expression* parse_number(parse_state* ps, int* err_out) {
+    if (ps->tokens[ps->curpos].type == TOK_NUMBER) {
+        return create_number(ps->tokens[ps->curpos++].val);
+    }
+    else {
+        *err_out = -1;
+        return NULL;
+    }
+}
+
+expression* parse_group_or_number(parse_state* ps, int* err_out) {
+    expression* expr;
+    int err = 0;
+    if (ps->tokens[ps->curpos].type == TOK_PAREN) {
+        expr = parse_group(ps, &err);
+        if (err != 0) {
+            *err_out = err;
+            return NULL;
+        }
+        return expr;
+    }
+    else if (ps->tokens[ps->curpos].type == TOK_NUMBER) {
+        expr = parse_number(ps, &err);
+        if (err != 0) {
+            *err_out = err;
+            return NULL;
+        }
+        return expr;
+    }
+    else {
+        *err_out = -1;
+        return NULL;
+    }
 }
 
 expression* create_number(int value) {
@@ -59,6 +199,7 @@ expression* create_tree(char op, expression* left, expression* right) {
 }
 
 int free_expression(expression* expr) {
+    if (expr == NULL) return 0;
     if (expr->type == EXPR_TREE) {
         free_expression((expr->data).tree.left);
         (expr->data).tree.left = NULL;
@@ -67,6 +208,7 @@ int free_expression(expression* expr) {
     }
     // free(expr);
     customFree(expr);
+    return 0;
 }
 
 /* Convert an expression into a human-readable string. Returns the length of the 
