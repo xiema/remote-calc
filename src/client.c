@@ -40,7 +40,14 @@ int client_run(char* ip_addr) {
     while (1) {
         fgets(cmd, APP_MAXCMDLENGTH, stdin);
         err = 0;;
+        // remove trailing newline
         if (cmd[strlen(cmd)-1] == '\n') cmd[strlen(cmd)-1] = '\0';
+
+        // ensure non-empty message
+        if (strlen(cmd) == 0) {
+            continue;
+        }
+
         if (send(s, cmd, strlen(cmd), 0) < 0) {
             puts("Send message failed");
             continue;
@@ -48,6 +55,7 @@ int client_run(char* ip_addr) {
         
         if ((recv_size = recv(s, recv_msg, APP_MAXCMDLENGTH, 0)) == SOCKET_ERROR) {
             puts ("Receive failed");
+            break;
         }
         else {
             recv_msg[recv_size] = '\0';

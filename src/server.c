@@ -19,27 +19,43 @@ int server_loop(SOCKET new_socket) {
     int recv_size, val, err;
     char reply[APP_MAXCMDLENGTH+1];
     char msg[APP_MAXCMDLENGTH + 1];
+    int result;
 
-    while (1) {
-        err = 0;
-        if ((recv_size = recv(new_socket, msg, APP_MAXCMDLENGTH, 0)) == SOCKET_ERROR) {
-            puts("Client disconnected");
+    while (!terminate) {
+        fd_set readSet;
+        FD_ZERO(&readSet);
+        FD_SET(new_socket, &readSet);
+
+        struct timeval timeout;
+        timeout.tv_sec = 1;  // Set the timeout to 1 second
+        timeout.tv_usec = 0;
+
+        result = select(0, &readSet, NULL, NULL, &timeout);
+        if (result == SOCKET_ERROR) {
+            fprintf(stderr, "Select failed: %d\n", WSAGetLastError());
             break;
         }
-        else {
-            msg[recv_size] = '\0';
-            printf("Received command: %s\n", msg);
-            val = calculate_value_str(msg, &err);
-            if (err != 0) {
-                sprintf(reply, "Error %d", err);
-                puts(reply);
+
+        if (result > 0) {
+            err = 0;
+            if ((recv_size = recv(new_socket, msg, APP_MAXCMDLENGTH, 0)) == SOCKET_ERROR) {
+                break;
             }
             else {
-                sprintf(reply, "%d", val);
-                printf("Sending: %d\n", val);
-            }
-            if (send(new_socket, reply, strlen(reply), 0) < 0) {
-                puts("Send reply failed");
+                msg[recv_size] = '\0';
+                printf("Received command: %s\n", msg);
+                val = calculate_value_str(msg, &err);
+                if (err != 0) {
+                    sprintf(reply, "Error %d", err);
+                    puts(reply);
+                }
+                else {
+                    sprintf(reply, "%d", val);
+                    printf("Sending: %d\n", val);
+                }
+                if (send(new_socket, reply, strlen(reply), 0) < 0) {
+                    puts("Send reply failed");
+                }
             }
         }
     }
@@ -108,6 +124,7 @@ int server_run() {
             }
             puts("Client connected");
             server_loop(clientSocket);
+            puts("Client disconnected");
             // Close the client socket
             closesocket(clientSocket);
         }
