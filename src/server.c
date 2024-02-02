@@ -1,5 +1,6 @@
 #include "server.h"
 #include "socket.h"
+#include "calc.h"
 
 #include <stdio.h>
 #include <winsock2.h>
@@ -43,17 +44,35 @@ int server_run() {
         printf("Accept connection failed: Error code %d", WSAGetLastError());
     }
 
-    int recv_size;
-    if ((recv_size = recv(new_socket, msg, APP_MAXCMDLENGTH, 0)) == SOCKET_ERROR) {
-        puts("Receive failed");
-    }
-    else {
-        msg[recv_size] = '\0';
-        puts(msg);
+    int recv_size, val, err;
+    char reply[APP_MAXCMDLENGTH+1];
+    while (1) {
+        err = 0;
+        if ((recv_size = recv(new_socket, msg, APP_MAXCMDLENGTH, 0)) == SOCKET_ERROR) {
+            puts("Receive failed");
+            break;
+        }
+        else {
+            msg[recv_size] = '\0';
+            printf("Received command: %s\n", msg);
+            val = calculate_value_str(msg, &err);
+            if (err != 0) {
+                sprintf(reply, "Error %d", err);
+                puts(reply);
+            }
+            else {
+                sprintf(reply, "%d", val);
+                printf("Sending: %d\n", val);
+            }
+            if (send(new_socket, reply, strlen(reply), 0) < 0) {
+                puts("Send reply failed");
+            }
+        }
     }
 
-    // Close socket
+    // Close sockets
     closesocket(s);
+    closesocket(new_socket);
 
     // Socket library cleanup
     sockQuit();

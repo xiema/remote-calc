@@ -16,7 +16,6 @@ endif
 # PATHS
 
 UNITY_DIR = vendor/unity/src/
-SC_DIR = vendor/sc/src/
 SRC_DIR = src/
 TEST_DIR = test/
 BUILD_DIR = build/
@@ -34,7 +33,7 @@ TEST_FILES = $(wildcard $(TEST_DIR)*.c)
 COMPILE=gcc -c
 LINK=gcc
 DEPEND=gcc -MM -MG -MF
-CFLAGS=-I. -I$(UNITY_DIR) -I$(SRC_DIR) -I$(SC_DIR)
+CFLAGS=-I. -I$(UNITY_DIR) -I$(SRC_DIR)
 
 RESULTS = $(patsubst $(TEST_DIR)$(TEST_PREFIX)%.c,$(RESULTS_DIR)$(TEST_PREFIX)%.txt,$(TEST_FILES))
 

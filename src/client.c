@@ -5,16 +5,7 @@
 #include <string.h>
 #include <winsock2.h>
 
-int get_send_command(SOCKET s) {
-    char cmd[APP_MAXCMDLENGTH+1];
-
-    fgets(cmd, sizeof(cmd), stdin);
-
-    return 0;
-}
-
-// TODO: Ensure cleanup
-int client_run() {
+int client_run(char* ip_addr) {
     SOCKET s;
     struct sockaddr_in server;
 
@@ -26,7 +17,7 @@ int client_run() {
     
     // Set connection details
     // TODO: Allow other address/port
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_addr.s_addr = inet_addr(ip_addr);
     server.sin_family = AF_INET;
     server.sin_port = htons(APP_DEFAULTPORT);
     
@@ -42,12 +33,25 @@ int client_run() {
         return 1;
     }
 
-    char *message = "This is a message!";
-    if (send(s, message, strlen(message), 0) < 0) {
-        puts("Send message failed");
-    }
-    else {
-        puts("Message sent\n");
+    char cmd[APP_MAXCMDLENGTH+1];
+    char recv_msg[APP_MAXCMDLENGTH+1];
+    int err, recv_size;
+    while (1) {
+        fgets(cmd, APP_MAXCMDLENGTH, stdin);
+        err = 0;;
+        if (cmd[strlen(cmd)-1] == '\n') cmd[strlen(cmd)-1] = '\0';
+        if (send(s, cmd, strlen(cmd), 0) < 0) {
+            puts("Send message failed");
+            continue;
+        }
+        
+        if ((recv_size = recv(s, recv_msg, APP_MAXCMDLENGTH, 0)) == SOCKET_ERROR) {
+            puts ("Receive failed");
+        }
+        else {
+            recv_msg[recv_size] = '\0';
+            printf("Received: %s\n", recv_msg);
+        }
     }
 
     // Close socket

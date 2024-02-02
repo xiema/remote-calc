@@ -1,12 +1,15 @@
 #include "calc.h"
 #include "socket.h"
 
-#include "sc_queue.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+
+/* For debugging purposes, can compile with custom allocation/deallocation
+   functions that allow tracking of the allocated object count in the 
+   global variable ALLOCATED.
+*/
 int ALLOCATED = 0;
 #ifdef TEST
 void* customMalloc(size_t size) {
@@ -18,17 +21,25 @@ void customFree(void* ptr) {
     ALLOCATED--;
 }
 #else
-#define malloc customMalloc
-#define free customFree
+#define customMalloc malloc
+#define customFree free
 #endif
 
 int calc_run() {
     char cmd[APP_MAXCMDLENGTH+1];
+    int val, err;
 
-    // TODO: check behavior for multiple lines
-    fgets(cmd, APP_MAXCMDLENGTH, stdin);
-
-    printf(cmd);
+    while (1) {
+        fgets(cmd, APP_MAXCMDLENGTH, stdin);
+        err = 0;
+        val = calculate_value_str(cmd, &err);
+        if (err != 0) {
+            printf("Error %d\n", err);
+        }
+        else {
+            printf("Value: %d\n", val);
+        }
+    }
 
     return 0;
 }
@@ -265,7 +276,7 @@ static int is_digit(char c) {
 }
 
 int tokenize(char* str, token* out, int maxlength) {
-    int state = 0; //0 - symbol; 1 - number
+    int state = 0; //0 - single-char symbol; 1 - multi-char number
     int len = 0;
     int d;
     for (int curpos = 0; curpos < maxlength; curpos++) {
@@ -313,6 +324,10 @@ int tokenize(char* str, token* out, int maxlength) {
                 state = 0;
             }
             continue;
+        }
+        // INVALID
+        else {
+            return -1;
         }
 
         if (len >= APP_MAXTOKENLENGTH) return -1;
