@@ -57,6 +57,10 @@ expression* parse_group(parse_state* ps, int* err_out);
 
 expression* parse_group_or_number(parse_state* ps, int* err_out);
 
+int calculate_value(expression* expr, int* err_out);
+
+int calculate_value_str(char* str, int* err_out);
+
 int debug_expression(expression* expr, char* out, int curpos, int maxlength);
 
 int calc_run();

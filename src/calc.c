@@ -320,3 +320,58 @@ int tokenize(char* str, token* out, int maxlength) {
 
     return len;
 }
+
+int calculate_value(expression* expr, int* err_out) {
+    if (expr->type == EXPR_NUMBER) {
+        return expr->data.value;
+    }
+    else {
+        int val1, val2;
+        int err = 0;
+        val1 = calculate_value(expr->data.tree.left, &err);
+        if (err != 0) {
+            *err_out = err;
+            return 0;
+        }
+        val2 = calculate_value(expr->data.tree.right, &err);
+        if (err != 0) {
+            *err_out = err;
+            return 0;
+        }
+        switch (expr->data.tree.op) {
+            case '+':
+                return val1 + val2;
+            case '-':
+                return val1 - val2;
+            case '*':
+                return val1 * val2;
+            case '/':
+                return val1 / val2;
+            default:
+                *err_out = -1;
+                return 0;
+        }
+    }
+}
+
+int calculate_value_str(char* str, int* err_out) {
+    int err = 0;
+    expression* expr;
+
+    expr = parse_cmd(str, &err);
+    if (err != 0) {
+        *err_out = err;
+        return 0;
+    }
+
+    int val;
+    val = calculate_value(expr, &err);
+    free_expression(expr);
+
+    if (err != 0) {
+        *err_out = err;
+        return 0;
+    }
+
+    return val;
+}

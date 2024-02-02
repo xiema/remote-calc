@@ -194,6 +194,47 @@ void test_parsing_error() {
     TEST_ASSERT_EQUAL(0, ALLOCATED);
 }
 
+void test_calculation() {
+    int val;
+    int err = 0;
+
+    val = calculate_value_str("1 + 1", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(2, val);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    val = calculate_value_str("(1 + 2) * (5 - 3) / (1)", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(6, val);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    val = calculate_value_str("1 + 2 + 3 + 4", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(10, val);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    val = calculate_value_str("1 * 2 * 3 * 4", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(24, val);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    val = calculate_value_str("10 - 3 - 6 - 1", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(0, val);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    val = calculate_value_str("10 - (3 - 6) - 1", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(12, val);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+
+    // integer division
+    val = calculate_value_str("4 / 3", &err);
+    TEST_ASSERT_EQUAL(0, err);
+    TEST_ASSERT_EQUAL(1, val);
+    TEST_ASSERT_EQUAL(0, ALLOCATED);
+}
+
 int main(void) {
     UNITY_BEGIN();
 
@@ -201,6 +242,7 @@ int main(void) {
     RUN_TEST(test_tokenization);
     RUN_TEST(test_parsing);
     RUN_TEST(test_parsing_error);
+    RUN_TEST(test_calculation);
 
     UNITY_END();
 
