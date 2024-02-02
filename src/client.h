@@ -1,1 +1,1 @@
-int client_run();
+int client_run(char* ip_addr);
